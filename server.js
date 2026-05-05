@@ -1,26 +1,27 @@
-import express from "express";
-import cors from "cors";
+const express = require("express");
+const cors = require("cors");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Test route
+// Test route (to confirm server works)
 app.get("/", (req, res) => {
-  res.send("✅ Backend is working");
+  res.send("✅ AI Backend is running...");
 });
 
-// Chat route
+// Chat endpoint
 app.post("/chat", async (req, res) => {
-  try {
-    const userMessage = req.body.message;
+  const userMessage = req.body.message;
 
+  try {
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/distilgpt2",
+      "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
       {
         method: "POST",
         headers: {
+          "Authorization": `Bearer ${process.env.HF_API_KEY}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -31,18 +32,24 @@ app.post("/chat", async (req, res) => {
 
     const data = await response.json();
 
-    res.json({
-      reply: data[0]?.generated_text || "No response"
-    });
+    console.log("HF response:", data);
 
-  } catch (err) {
-    console.error(err);
-    res.json({ reply: "❌ AI error" });
+    if (data.error) {
+      return res.json({ reply: "⚠️ AI error: " + data.error });
+    }
+
+    const reply = data[0]?.generated_text || "🤖 No response";
+
+    res.json({ reply });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ reply: "❌ Server error" });
   }
 });
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log("Server running on port " + PORT);
 });
